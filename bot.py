@@ -14,6 +14,8 @@ from handlers.location import location_handler
 from scheduler import setup_scheduler
 from handlers.habits import habit_handler, habit_callback, habit_text
 
+
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 TOKEN = os.getenv("TELEGRAM_TOKEN")
