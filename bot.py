@@ -1,6 +1,7 @@
 import os, logging
 from dotenv import load_dotenv
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 from db import engine
 from models import Base
@@ -14,13 +15,30 @@ from scheduler import setup_scheduler
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
-
 TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+# --- BUTTON ROUTER ---
+async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "📥 Backlog":
+        await backlog_handler(update, context)
+    elif text == "🗓 Plan":
+        await plan_handler(update, context)
+    elif text == "✅ Today":
+        await today_handler(update, context)
+    elif text == "🔥 Habit":
+        await habit_handler(update, context)
+    else:
+        # fallback for typing new backlog items etc.
+        await backlog_text(update, context)
+        await daily_text(update, context)
+        await admin_text(update, context)
 
 def main():
     Base.metadata.create_all(bind=engine)
     app = ApplicationBuilder().token(TOKEN).build()
     
+    # commands still work, but you won't need them
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("backlog", backlog_handler))
     app.add_handler(CommandHandler("today", today_handler))
@@ -34,9 +52,7 @@ def main():
     app.add_handler(CallbackQueryHandler(admin_callback, pattern=r"^admin_"))
     
     app.add_handler(MessageHandler(filters.LOCATION, location_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, backlog_text))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, daily_text))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_text))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_router))
     
     setup_scheduler(app)
     app.run_polling()
