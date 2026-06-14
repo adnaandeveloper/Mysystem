@@ -12,6 +12,7 @@ from handlers.habits import habit_handler, habit_callback
 from handlers.admin import admin_handler, admin_callback, admin_text
 from handlers.location import location_handler
 from scheduler import setup_scheduler
+from handlers.habits import habit_handler, habit_callback, habit_text
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -29,8 +30,9 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🔥 Habit":
         await habit_handler(update, context)
     else:
-        # fallback for typing new backlog items etc.
+        # this now keeps adding forever until you type 'done'
         await backlog_text(update, context)
+        await habit_text(update, context)
         await daily_text(update, context)
         await admin_text(update, context)
 
