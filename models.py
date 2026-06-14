@@ -20,8 +20,6 @@ class BacklogItem(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(BigInteger, index=True)
     text = Column(Text)
-    tags = Column(String(200))
-    priority = Column(Integer, default=0)
     archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -40,7 +38,6 @@ class Habit(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(BigInteger, index=True)
     name = Column(String(200))
-    frequency = Column(String(50), default="daily")
     active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -50,5 +47,4 @@ class HabitLog(Base):
     habit_id = Column(Integer, ForeignKey('habits.id'))
     date = Column(Date, index=True)
     completed = Column(Boolean, default=False)
-    note = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)

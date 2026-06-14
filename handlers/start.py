@@ -10,9 +10,8 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     session = SessionLocal()
     db_user = session.query(User).filter_by(telegram_id=user.id).first()
-    
     if not db_user:
-        is_admin = (user.id == ADMIN_ID)
+        is_admin = user.id == ADMIN_ID
         db_user = User(
             telegram_id=user.id,
             username=user.username,
@@ -23,32 +22,11 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         session.add(db_user)
         session.commit()
-    
     if not db_user.is_allowed and not db_user.is_admin:
-        await update.message.reply_text("🔒 Not authorized. Ask admin.")
+        await update.message.reply_text("Not authorized")
         session.close()
         return
-    
-    location_btn = KeyboardButton("📍 Update timezone", request_location=True)
-    keyboard = ReplyKeyboardMarkup([[location_btn]], resize_keyboard=True, one_time_keyboard=True)
-    
-    await update.message.reply_text(
-        f"Welcome {user.first_name}! 🎯
-
-"
-        f"Current timezone: {db_user.timezone}
-
-"
-        "📥 /backlog – ideas
-"
-        "🗓 /plan – pick today's tasks
-"
-        "✅ /today – toggle
-"
-        "🔥 /habit – track
-
-"
-        "Traveling? Tap button below to auto-update timezone.",
-        reply_markup=keyboard
-    )
+    kb = ReplyKeyboardMarkup([[KeyboardButton("Update timezone", request_location=True)]], resize_keyboard=True, one_time_keyboard=True)
+    msg = f"Welcome {user.first_name}!\nCurrent timezone: {db_user.timezone}\n\n/backlog /plan /today /habit"
+    await update.message.reply_text(msg, reply_markup=kb)
     session.close()
