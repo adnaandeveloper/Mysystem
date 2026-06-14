@@ -1,16 +1,19 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from timezonefinder import TimezoneFinder
+import requests
 from db import SessionLocal
 from models import User
 
-tf = TimezoneFinder()
-
 async def location_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     loc = update.message.location
-    tz = tf.timezone_at(lat=loc.latitude, lng=loc.longitude)
-    if not tz:
-        return
+    try:
+        # free API, no key needed
+        url = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={loc.latitude}&longitude={loc.longitude}&localityLanguage=en"
+        resp = requests.get(url, timeout=5)
+        tz = resp.json().get("timezone", "Europe/Copenhagen")
+    except:
+        tz = "Europe/Copenhagen"
+    
     s = SessionLocal()
     u = s.query(User).filter_by(telegram_id=update.effective_user.id).first()
     if u:
