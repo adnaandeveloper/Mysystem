@@ -1,5 +1,5 @@
-python-telegram-bot==21.4
-SQLAlchemy==2.0.30
+python-telegram-bot==21.7
+SQLAlchemy==2.0.36
 python-dotenv==1.0.1
 APScheduler==3.10.4
 psycopg2-binary==2.9.9
