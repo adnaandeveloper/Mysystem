@@ -1,47 +1,34 @@
-import os, logging
-from dotenv import load_dotenv
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from db import engine
-from models import Base
+import os
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from db import Base, engine
 from handlers.start import start_handler
-from handlers.backlog import backlog_handler, backlog_callback, backlog_text
-from handlers.daily import today_handler, plan_handler, all_tasks_handler, daily_callback, daily_text
-from handlers.habits import habits_handler, habits_callback, habits_text
-from handlers.admin import admin_handler, admin_callback, admin_text
-from handlers.history import history_handler
-from handlers.location import location_handler
-from scheduler import setup_scheduler
+from handlers.menu import menu_router
+from handlers.today import today_callback
+from handlers.plan import plan_handler
+from handlers.habits import habits_callback, habits_recurrence
+from handlers.admin import admin_callback
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-load_dotenv()
-logging.basicConfig(level=logging.INFO)
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-async def menu_router(update, context):
-    t = update.message.text
-    if t == "📥 Backlog": await backlog_handler(update, context)
-    elif t == "✅ Today": await today_handler(update, context)
-    elif t == "🔥 Habits": await habits_handler(update, context)
-    elif t == "📚 All Tasks": await all_tasks_handler(update, context)
-    elif t == "🕒 History": await history_handler(update, context)
-    elif t == "⚙️ Admin": await admin_handler(update, context)
-    elif t == "🗓 Plan": await plan_handler(update, context)
-    else:
-        await backlog_text(update, context)
-        await habits_text(update, context)
-        await daily_text(update, context)
-        await admin_text(update, context)
 
 def main():
     Base.metadata.create_all(bind=engine)
-    app = ApplicationBuilder().token(TOKEN).build()
+    
+    app = Application.builder().token(TOKEN).build()
+    
     app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CallbackQueryHandler(backlog_callback, pattern=r"^bl_"))
-    app.add_handler(CallbackQueryHandler(daily_callback, pattern=r"^td_"))
-    app.add_handler(CallbackQueryHandler(habits_callback, pattern=r"^hb_"))
-    app.add_handler(CallbackQueryHandler(admin_callback, pattern=r"^adm_"))
-    app.add_handler(MessageHandler(filters.LOCATION, location_handler))
+    app.add_handler(CallbackQueryHandler(today_callback, pattern="^td_"))
+    app.add_handler(CallbackQueryHandler(plan_handler, pattern="^pick_"))
+    app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hb_"))
+    app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hbd_"))
+    app.add_handler(CallbackQueryHandler(habits_recurrence, pattern="^hr_"))
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^adm_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_router))
-    setup_scheduler(app)
+    
+    scheduler = AsyncIOScheduler()
+    scheduler.start()
+    
+    print("Bot started successfully")
     app.run_polling()
 
 if __name__ == "__main__":
