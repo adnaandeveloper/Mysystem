@@ -8,8 +8,8 @@ ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    session = SessionLocal()
-    db_user = session.query(User).filter_by(telegram_id=user.id).first()
+    s = SessionLocal()
+    db_user = s.query(User).filter_by(telegram_id=user.id).first()
     
     if not db_user:
         is_admin = user.id == ADMIN_ID
@@ -21,25 +21,25 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             is_allowed=is_admin,
             timezone=os.getenv("TZ_DEFAULT", "Europe/Copenhagen")
         )
-        session.add(db_user)
-        session.commit()
+        s.add(db_user)
+        s.commit()
     
     if not db_user.is_allowed and not db_user.is_admin:
-        await update.message.reply_text("Not authorized")
-        session.close()
+        await update.message.reply_text("⛔ Not authorized. Ask admin to add you.")
+        s.close()
         return
 
-    # --- PERMANENT BUTTON MENU ---
-    keyboard = ReplyKeyboardMarkup(
-        [
-            [KeyboardButton("📥 Backlog"), KeyboardButton("🗓 Plan")],
-            [KeyboardButton("✅ Today"), KeyboardButton("🔥 Habit")],
-            [KeyboardButton("📍 Update timezone", request_location=True)]
-        ],
-        resize_keyboard=True,
-        is_persistent=True
-    )
+    # Build keyboard
+    keyboard = [
+        [KeyboardButton("📥 Backlog"), KeyboardButton("✅ Today")],
+        [KeyboardButton("🔥 Habits"), KeyboardButton("📚 All Tasks")],
+        [KeyboardButton("🕒 History")]
+    ]
+    if db_user.is_admin:
+        keyboard.append([KeyboardButton("⚙️ Admin")])
     
-    msg = f"Welcome {user.first_name}!\nTimezone: {db_user.timezone}"
-    await update.message.reply_text(msg, reply_markup=keyboard)
-    session.close()
+    await update.message.reply_text(
+        f"Welcome {user.first_name}!",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
+    )
+    s.close()
