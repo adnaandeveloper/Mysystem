@@ -9,13 +9,11 @@ async def habits_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         habits = session.query(Habit).filter_by(user_id=user.id).all()
-        
-        text = "🔥 Habits:
-" if habits else "No habits yet."
+
+        text = "🔥 Habits:\n" if habits else "No habits yet."
         for h in habits:
-            text += f"
-• {h.name} ({h.recurrence}) - streak: {h.streak}"
-        
+            text += f"\n• {h.name} ({h.recurrence}) - streak: {h.streak}"
+
         keyboard = [
             [InlineKeyboardButton("➕ Add Habit", callback_data="hb_add")],
             [InlineKeyboardButton("✅ Mark Done", callback_data="hb_done")]
@@ -27,7 +25,7 @@ async def habits_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def habits_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
+
     if query.data == "hb_add":
         context.user_data["awaiting"] = "habit_name"
         await query.message.reply_text("Send habit name:")
@@ -68,14 +66,13 @@ async def habits_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await update.message.reply_text("Choose recurrence:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
-    # text not used for recurrence
 
 async def habits_recurrence(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     rec = query.data.split("_")[1]
     name = context.user_data.get("habit_name")
-    
+
     session = SessionLocal()
     try:
         user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
