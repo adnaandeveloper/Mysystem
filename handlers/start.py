@@ -46,8 +46,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         await update.message.reply_text(
-            f"Welcome {user.first_name}! 🎯
-Use the menu below.",
+           f"Welcome {user.first_name}! Use the menu below.",
             reply_markup=get_main_keyboard(is_admin)
         )
     finally:
