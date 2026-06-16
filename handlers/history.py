@@ -2,7 +2,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from db import SessionLocal
 from models import HistoryLog, User
-
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = SessionLocal()
     try:
