@@ -9,13 +9,14 @@ from handlers.admin import admin_handler, admin_text
 from handlers.start import get_main_keyboard, ADMIN_ID
 from db import SessionLocal
 from models import User
+from handlers.done_today import done_today_handler
 
 async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text
 
     # GLOBAL BACK - works from anywhere
-    if text == "⬅️ Back":
+    if text in ["⬅ Back", "⬅️ Back"]:  # <-- accept both versions
         context.user_data["awaiting"] = None
         context.user_data.pop("habit_name", None)
         is_admin = user.id == ADMIN_ID
@@ -25,7 +26,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = SessionLocal()
     try:
         db_user = session.query(User).filter_by(telegram_id=user.id).first()
-        if not db_user or (not db_user.is_allowed and user.id!= ADMIN_ID):
+        if not db_user or (not db_user.is_allowed and user.id != ADMIN_ID):
             context.user_data["awaiting"] = None
             await update.message.reply_text("Not allowed.")
             return
@@ -55,5 +56,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return await history_handler(update, context)
         elif text == "Admin":
             return await admin_handler(update, context)
+        elif text == "Done Today":  # <-- FIXED: added return
+            return await done_today_handler(update, context)
     finally:
         session.close()

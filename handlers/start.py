@@ -6,11 +6,13 @@ import os
 
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
+
+
 def get_main_keyboard(is_admin=False):
     rows = [
         ["Backlog", "Today"],
         ["Habits", "All Tasks"],
-        ["History"]
+        ["Done Today", "History"] 
     ]
     if is_admin:
         rows.append(["Admin"])
