@@ -11,16 +11,13 @@ async def today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not items:
             text = "Today is empty."
+            keyboard = []
         else:
-            text = "Today:\n" + "\n".join([f"{idx+1}. {i.text}" for idx, i in enumerate(items)])
+            text = f"Today ({len(items)} tasks) - tap to complete:"
+            keyboard = [[InlineKeyboardButton(f"✅ {i.text[:50]}", callback_data=f"td_done_{i.id}")] for i in items]
 
-        keyboard = []
-        for i in items:
-            keyboard.append([
-                InlineKeyboardButton("Done", callback_data=f"td_done_{i.id}"),
-                InlineKeyboardButton("Remove", callback_data=f"td_del_{i.id}")
-            ])
-        keyboard.append([InlineKeyboardButton("Pick from Backlog", callback_data="td_pick")])
+        keyboard.append([InlineKeyboardButton("➕ Pick from Backlog", callback_data="td_pick")])
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Menu", callback_data="back_menu")])
 
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     finally:
@@ -43,22 +40,27 @@ async def today_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 session.add(HistoryLog(user_id=user.id, action="today_done", detail=item.text))
                 session.delete(item)
                 session.commit()
-                await query.edit_message_text(f"Completed: {item.text}")
-
-        elif data.startswith("td_del_"):
-            item_id = int(data.split("_")[2])
-            item = session.query(TodayItem).filter_by(id=item_id, user_id=user.id).first()
-            if item:
-                session.delete(item)
-                session.commit()
-                await query.edit_message_text("Removed from Today")
+                await query.answer(f"Done: {item.text}", show_alert=False)
+                # refresh the list
+                await today_handler(query, context)
+                return
 
         elif data == "td_pick":
             items = session.query(BacklogItem).filter_by(user_id=user.id).all()
             if not items:
-                await query.message.reply_text("Backlog is empty. Add tasks first.")
+                await query.message.reply_text("Backlog is empty")
                 return
             keyboard = [[InlineKeyboardButton(i.text[:40], callback_data=f"pick_{i.id}")] for i in items]
-            await query.message.reply_text("Select from Backlog:", reply_markup=InlineKeyboardMarkup(keyboard))
+            keyboard.append([InlineKeyboardButton("⬅️ Back", callback_data="back_today")])
+            await query.edit_message_text("Select to move to Today:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+        elif data == "back_today":
+            await today_handler(query, context)
+
+        elif data == "back_menu":
+            from handlers.start import get_main_keyboard, ADMIN_ID
+            is_admin = update.effective_user.id == ADMIN_ID
+            await query.message.delete()
+            await query.message.reply_text("Menu:", reply_markup=get_main_keyboard(is_admin))
     finally:
         session.close()

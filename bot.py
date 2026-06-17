@@ -15,6 +15,8 @@ def main():
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start_handler))
+    
+    # callbacks - specific first
     app.add_handler(CallbackQueryHandler(today_callback, pattern="^td_"))
     app.add_handler(CallbackQueryHandler(plan_handler, pattern="^pick_"))
     app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hb_"))
@@ -22,6 +24,11 @@ def main():
     app.add_handler(CallbackQueryHandler(habits_recurrence, pattern="^hr_"))
     app.add_handler(CallbackQueryHandler(habits_day, pattern="^day_"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^adm_"))
+    
+    # remove this line - you don't have a back_ callback
+    # app.add_handler(CallbackQueryHandler(today_callback, pattern="^back_"))
+
+    # text messages last
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_router))
 
     print("Bot started successfully")
