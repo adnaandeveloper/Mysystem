@@ -7,10 +7,7 @@ from handlers.start import get_main_keyboard, ADMIN_ID
 async def today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = SessionLocal()
     try:
-        # works for both message and callback
         user_id = update.effective_user.id
-        chat_id = update.effective_chat.id
-
         user = session.query(User).filter_by(telegram_id=user_id).first()
         items = session.query(TodayItem).filter_by(user_id=user.id, done=False).all()
 
@@ -24,11 +21,10 @@ async def today_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("➕ Pick from Backlog", callback_data="td_pick")])
         keyboard.append([InlineKeyboardButton("⬅️ Back to Menu", callback_data="back_menu")])
 
-        # if called from callback, edit message, else send new
         if hasattr(update, 'callback_query') and update.callback_query:
             await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
         else:
-            await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=InlineKeyboardMarkup(keyboard))
+            await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
     finally:
         session.close()
 
@@ -44,13 +40,11 @@ async def today_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             item_id = int(data.split("_")[2])
             item = session.query(TodayItem).filter_by(id=item_id, user_id=user.id).first()
             if item:
-                # move to done
                 done = DoneItem(user_id=user.id, text=item.text)
                 session.add(done)
                 session.add(HistoryLog(user_id=user.id, action="today_done", detail=item.text))
                 session.delete(item)
                 session.commit()
-                # REFRESH the list - this makes it disappear
                 await today_handler(update, context)
                 return
 
@@ -69,7 +63,7 @@ async def today_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "back_menu":
             is_admin = update.effective_user.id == ADMIN_ID
             await query.message.delete()
-            await context.bot.send_message(
+            await update.message.reply_text("Menu:", reply_markup=get_main_keyboard(is_admin)) if hasattr(update, 'message') else await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="Menu:",
                 reply_markup=get_main_keyboard(is_admin)
