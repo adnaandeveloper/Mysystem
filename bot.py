@@ -24,6 +24,9 @@ def main():
     app.add_handler(CallbackQueryHandler(habits_recurrence, pattern="^hr_"))
     app.add_handler(CallbackQueryHandler(habits_day, pattern="^day_"))
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^adm_"))
+
+    app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hview_"))
+app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hdel_"))
     
     # remove this line - you don't have a back_ callback
     # app.add_handler(CallbackQueryHandler(today_callback, pattern="^back_"))
