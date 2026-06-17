@@ -36,6 +36,8 @@ def main():
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_router))
 
+    app.add_handler(CallbackQueryHandler(habits_callback, pattern="^hb_all$"))
+
     print("Bot started successfully")
     app.run_polling()
 
