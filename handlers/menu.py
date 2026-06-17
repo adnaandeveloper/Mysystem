@@ -6,31 +6,42 @@ from handlers.habits import habits_handler, habits_text
 from handlers.done import done_handler
 from handlers.history import history_handler
 from handlers.admin import admin_handler, admin_text
+from handlers.start import get_main_keyboard, ADMIN_ID
 from db import SessionLocal
 from models import User
-import os
-
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    text = update.message.text
+
+    # GLOBAL BACK - works from anywhere
+    if text == "⬅️ Back":
+        context.user_data["awaiting"] = None
+        context.user_data.pop("habit_name", None)
+        is_admin = user.id == ADMIN_ID
+        await update.message.reply_text("Menu:", reply_markup=get_main_keyboard(is_admin))
+        return
+
     session = SessionLocal()
     try:
         db_user = session.query(User).filter_by(telegram_id=user.id).first()
-        if not db_user or (not db_user.is_allowed and user.id != ADMIN_ID):
+        if not db_user or (not db_user.is_allowed and user.id!= ADMIN_ID):
+            context.user_data["awaiting"] = None
             await update.message.reply_text("Not allowed.")
             return
 
-        text = update.message.text
         state = context.user_data.get("awaiting")
 
         if state:
             if state == "backlog_add":
                 return await backlog_text(update, context)
-            if state in ["habit_name", "habit_recurrence"]:
+            if state in ["habit_name", "habit_recurrence", "habit_day"]:
                 return await habits_text(update, context)
             if state.startswith("admin_"):
                 return await admin_text(update, context)
+
+        # Clear state when clicking main menu
+        context.user_data["awaiting"] = None
 
         if text == "Backlog":
             return await backlog_handler(update, context)

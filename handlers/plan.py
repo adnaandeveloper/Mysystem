@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from db import SessionLocal
 from models import BacklogItem, TodayItem, User, HistoryLog
+
 async def plan_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -18,8 +19,9 @@ async def plan_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 today = TodayItem(user_id=user.id, backlog_id=backlog.id, text=backlog.text)
                 session.add(today)
                 session.add(HistoryLog(user_id=user.id, action="plan_add", detail=backlog.text))
+                session.delete(backlog) # MOVE not copy
                 session.commit()
-                await query.message.reply_text(f"➕ Added to Today: {backlog.text}")
+                await query.message.reply_text(f"Moved to Today: {backlog.text}")
             else:
                 await query.message.reply_text("Already in Today")
     finally:

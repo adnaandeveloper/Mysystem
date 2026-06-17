@@ -1,8 +1,11 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from db import SessionLocal
 from models import Habit, User, HistoryLog
 from datetime import datetime
+
+def back_keyboard():
+    return ReplyKeyboardMarkup([["⬅️ Back"]], resize_keyboard=True)
 
 async def habits_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = SessionLocal()
@@ -22,6 +25,7 @@ async def habits_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Mark Done", callback_data="hb_done")]
         ]
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.message.reply_text("Or press Back", reply_markup=back_keyboard())
     finally:
         session.close()
 
@@ -31,7 +35,7 @@ async def habits_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "hb_add":
         context.user_data["awaiting"] = "habit_name"
-        await query.message.reply_text("Send habit name:")
+        await query.message.reply_text("Send habit name:", reply_markup=back_keyboard())
     elif query.data == "hb_done":
         session = SessionLocal()
         try:
@@ -76,6 +80,12 @@ async def habits_recurrence(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rec = query.data.split("_")[1]
     name = context.user_data.get("habit_name")
 
+    if rec == "weekly":
+        context.user_data["awaiting"] = "habit_day"
+        keyboard = [[InlineKeyboardButton(d, callback_data=f"day_{d}")] for d in ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]]
+        await query.message.reply_text("Which day?", reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+
     session = SessionLocal()
     try:
         user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
@@ -85,5 +95,22 @@ async def habits_recurrence(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["awaiting"] = None
         context.user_data["habit_name"] = None
         await query.message.reply_text(f"Habit added: {name} ({rec})")
+    finally:
+        session.close()
+
+async def habits_day(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    day = query.data.split("_")[1]
+    name = context.user_data.get("habit_name")
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
+        habit = Habit(user_id=user.id, name=name, recurrence=f"weekly-{day}")
+        session.add(habit)
+        session.commit()
+        context.user_data["awaiting"] = None
+        context.user_data.pop("habit_name", None)
+        await query.message.reply_text(f"Habit added: {name} every {day}")
     finally:
         session.close()
